@@ -27,7 +27,8 @@ class ChatRequest(BaseModel):
 # 🔹 Charger FAISS et le modèle d'embeddings
 index = faiss.read_index("data/guerres_faiss.index")
 df_events = pd.read_pickle("data/guerres_mapping.pkl")
-embedding_model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
+# embedding_model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
+embedding_model = SentenceTransformer('Lajavaness/bilingual-document-embedding', trust_remote_code=True)
 
 quiz_sessions = {}
 conversation_memory = {}
@@ -63,6 +64,7 @@ def generate_quiz(topic):
     if confidence < SEUIL_CONFIANCE_LLM:
         # 📌 Récupérer les informations du sujet
         event = df_events.iloc[best_match_id]
+        print(event)
         contexte = (
             f"📜 **{event['Nom']}**\n"
             f"📅 **Date** : {event['Date']}\n"
@@ -184,10 +186,10 @@ def generate_summary(topic):
     D, I = index.search(np.array(query_embedding), k=1)
     best_match_id = I[0][0]
     confidence = D[0][0]
-
+    print(confidence)
     SEUIL_CONFIANCE_BAS = 10
 
-    if confidence > SEUIL_CONFIANCE_BAS:
+    if confidence < SEUIL_CONFIANCE_BAS:
         event = df_events.iloc[best_match_id]
         contexte = f"📜 **{event['Nom']}**\n📅 **Date** : {event['Date']}\n📍 **Lieu** : {event['Lieu']}\n📝 **Résumé** : {event['Résumé']}"
 
@@ -232,7 +234,7 @@ def search_history(message):
     D, I = index.search(np.array(query_embedding), k=1)
     best_match_id = I[0][0]
     confidence = D[0][0]
-
+    print(confidence)
     SEUIL_CONFIANCE_BAS = 10
 
     if confidence > SEUIL_CONFIANCE_BAS:
@@ -240,7 +242,7 @@ def search_history(message):
 
     event = df_events.iloc[best_match_id]
     contexte = f"📜 **{event['Nom']}**\n📅 **Date** : {event['Date']}\n📍 **Lieu** : {event['Lieu']}\n📝 **Résumé** : {event['Résumé']}"
-
+    print(contexte)
     # 🎯 Demander au LLM d'expliquer le sujet en détail
     llm_prompt = f"""
     Voici l'historique de la conversation avec l'utilisateur :
@@ -250,8 +252,8 @@ def search_history(message):
     {contexte}
 
     Rédige une explication détaillée et pédagogique en 300 mots maximum.
-    Structure la réponse en introduction, développement et conclusion.
     """
+    # Structure la réponse en introduction, développement et conclusion.
 
     response = ollama.chat(model="llama3.2", messages=[{"role": "user", "content": llm_prompt}])
 
@@ -282,7 +284,7 @@ def chat(request: ChatRequest):
         response_text = provide_quiz_answers(user_id)
     elif intent == "résumé":
         response_text = generate_summary(message)
-    elif intent == "recherche":
+    elif intent == "détail":
         response_text = search_history(message)
     else:
         response_text = "⚠️ Je ne suis pas sûr de comprendre. Peux-tu reformuler ?"
@@ -327,50 +329,55 @@ def chat(request: ChatRequest):
 
 
 
-# import numpy as np
-# import pandas as pd
+import numpy as np
+import pandas as pd
 
-# # 🔹 Liste de requêtes historiques
-# test_messages = [
-#     "Guerre de la Ligue de Cambrai", "Guerre de Trente Ans", "Guerre de Dévolution",
-#     "Guerre de Hollande", "Guerre de la Ligue d'Augsbourg", "Guerre de Succession d'Espagne",
-#     "Guerre de la Quadruple-Alliance", "Guerre de Succession de Pologne", "Guerre de Succession d'Autriche",
-#     "Guerre de Sept Ans", "Guerre d'Indépendance des États-Unis", "Guerres de la Révolution française",
-#     "Guerres napoléoniennes", "Guerre de 1812", "Guerre d'indépendance grecque",
-#     "Guerre de Crimée", "Guerre de Sécession", "Guerre franco-prussienne",
-#     "Guerre des Boers", "Première Guerre mondiale", "Guerre civile russe",
-#     "Guerre d'indépendance irlandaise", "Guerre civile chinoise", "Guerre d'Espagne",
-#     "Seconde Guerre mondiale", "Guerre de Corée", "Guerre d'Algérie",
-#     "Guerre du Vietnam", "Guerre du Yom Kippour", "Guerre d'Afghanistan",
-#     "Guerre Iran-Irak", "Guerre du Golfe", "Guerre de Bosnie",
-#     "Guerre du Kosovo", "Guerre d'Irak", "Guerre civile syrienne",
-#     "Guerre du Donbass", "Guerre du Haut-Karabagh", "Guerre civile libyenne",
-#     "Guerre civile yéménite", "Guerre du Mali", "Guerre civile centrafricaine",
-#     "Guerre du Darfour", "Guerre civile sud-soudanaise", "Guerre du Tigré",
-#     "Guerre civile éthiopienne", "Guerre civile angolaise", "Guerre civile mozambicaine",
-#     "Guerre civile sierra-léonaise", "Guerre civile libérienne"
-# ]
+# 🔹 Charger FAISS et le modèle d'embeddings
+index = faiss.read_index("data/guerres_faiss_NLP.index")
+df_events = pd.read_pickle("data/guerres_mapping_NLP.pkl")
+embedding_model = SentenceTransformer('Lajavaness/bilingual-document-embedding', trust_remote_code=True)
 
-# # 🔹 Stocker les résultats
-# test_results = []
+# 🔹 Liste de requêtes historiques
+test_messages = [
+    "Guerre de la Ligue de Cambrai", "Guerre de Trente Ans", "Guerre de Dévolution",
+    "Guerre de Hollande", "Guerre de la Ligue d'Augsbourg", "Guerre de Succession d'Espagne",
+    "Guerre de la Quadruple-Alliance", "Guerre de Succession de Pologne", "Guerre de Succession d'Autriche",
+    "Guerre de Sept Ans", "Guerre d'Indépendance des États-Unis", "Guerres de la Révolution française",
+    "Guerres napoléoniennes", "Guerre de 1812", "Guerre d'indépendance grecque",
+    "Guerre de Crimée", "Guerre de Sécession", "Guerre franco-prussienne",
+    "Guerre des Boers", "Première Guerre mondiale", "Guerre civile russe",
+    "Guerre d'indépendance irlandaise", "Guerre civile chinoise", "Guerre d'Espagne",
+    "Seconde Guerre mondiale", "Guerre de Corée", "Guerre d'Algérie",
+    "Guerre du Vietnam", "Guerre du Yom Kippour", "Guerre d'Afghanistan",
+    "Guerre Iran-Irak", "Guerre du Golfe", "Guerre de Bosnie",
+    "Guerre du Kosovo", "Guerre d'Irak", "Guerre civile syrienne",
+    "Guerre du Donbass", "Guerre du Haut-Karabagh", "Guerre civile libyenne",
+    "Guerre civile yéménite", "Guerre du Mali", "Guerre civile centrafricaine",
+    "Guerre du Darfour", "Guerre civile sud-soudanaise", "Guerre du Tigré",
+    "Guerre civile éthiopienne", "Guerre civile angolaise", "Guerre civile mozambicaine",
+    "Guerre civile sierra-léonaise", "Guerre civile libérienne"
+]
 
-# for message in test_messages:
-#     query_embedding = embedding_model.encode([message])
-#     D, I = index.search(np.array(query_embedding), k=1)
-#     best_match_id = I[0][0]
-#     confidence = D[0][0]
+# 🔹 Stocker les résultats
+test_results = []
+
+for message in test_messages:
+    query_embedding = embedding_model.encode([message])
+    D, I = index.search(np.array(query_embedding), k=1)
+    best_match_id = I[0][0]
+    confidence = D[0][0]
     
-#     best_match = df_events.iloc[best_match_id]["Nom"] if best_match_id < len(df_events) else "Aucun résultat"
+    best_match = df_events.iloc[best_match_id]["Nom"] if best_match_id < len(df_events) else "Aucun résultat"
 
-#     test_results.append({
-#         "Message": message,
-#         "Meilleur résultat": best_match,
-#         "Score de confiance": confidence
-#     })
+    test_results.append({
+        "Message": message,
+        "Meilleur résultat": best_match,
+        "Score de confiance": confidence
+    })
 
-# # 🔹 Convertir en DataFrame et afficher les résultats
-# df_test_results = pd.DataFrame(test_results)
-# print(df_test_results)
+# 🔹 Convertir en DataFrame et afficher les résultats
+df_test_results = pd.DataFrame(test_results)
+print(df_test_results)
 
-# # 🔹 Sauvegarder dans un fichier CSV pour analyse
-# df_test_results.to_csv("faiss_test_results2.csv", index=False)
+# 🔹 Sauvegarder dans un fichier CSV pour analyse
+df_test_results.to_csv("faiss_test_results_NLP.csv", index=False)
