@@ -1,0 +1,33 @@
+version: "3.1"
+
+rules:
+
+- rule: Say goodbye anytime the user says goodbye
+  steps:
+  - intent: goodbye
+  - action: utter_goodbye
+
+- rule: Say 'I am a bot' anytime the user challenges
+  steps:
+  - intent: bot_challenge
+  - action: utter_iamabot
+  
+- rule: Répondre aux questions historiques avec DeepSeek
+  steps:
+  - intent: question_evenement
+  - action: action_recherche_evenement_deepseek
+
+- rule: Générer un quizz historique avec DeepSeek
+  steps:
+  - intent: generation_quizz
+  - action: action_generation_quizz_deepseek
+
+- rule: Créer une fiche de révision avec DeepSeek
+  steps:
+  - intent: creation_fiche_revision
+  - action: action_fiche_revision_deepseek
+
+- rule: Comparer deux guerres avec DeepSeek
+  steps:
+  - intent: comparaison_guerres
+  - action: action_comparaison_guerres_deepseek
