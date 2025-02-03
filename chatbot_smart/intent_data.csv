@@ -1,0 +1,46 @@
+message,intent
+"Peux-tu me faire un quizz sur Napoléon ?",quizz
+"J’aimerais un quiz sur la Révolution Française",quizz
+"Fais-moi un quizz sur la Seconde Guerre mondiale",quizz
+"Génère un quizz sur la Renaissance",quizz
+"Je veux un quizz sur la bataille de Verdun",quizz
+"Quizz sur l'Empire Romain",quizz
+"Test mes connaissances sur la guerre de Cent Ans",quizz
+"Pose-moi des questions sur la guerre froide",quizz
+"Quelles sont les réponses du dernier quizz ?",quizz_reponses
+"Peux-tu me donner les corrigés du quizz ?",quizz_reponses
+"J’aimerais voir les réponses du quizz",quizz_reponses
+"Affiche-moi les réponses du test",quizz_reponses
+"Donne-moi les solutions aux questions posées",quizz_reponses
+"Donne-moi un résumé de la Guerre Froide",résumé
+"Fais-moi un résumé sur Napoléon",résumé
+"Je veux une fiche de révision sur la Première Guerre mondiale",résumé
+"Explique-moi en bref la Révolution industrielle",résumé
+"Je veux un résumé sur l'Empire Ottoman",résumé
+"Raconte-moi en quelques phrases la bataille de Stalingrad",résumé
+"Fais-moi une synthèse sur la colonisation de l'Amérique",résumé
+"Donne-moi une fiche de révision sur la guerre d'Indépendance américaine",résumé
+"Que s’est-il passé en 1789 ?",recherche
+"Parle-moi de la bataille de Verdun",recherche
+"Quels sont les événements de la Révolution Française ?",recherche
+"Quand a eu lieu la guerre de Cent Ans ?",recherche
+"Quels sont les faits marquants de la Renaissance ?",recherche
+"Donne-moi des informations sur la Réforme Protestante",recherche
+"Quels sont les événements majeurs du XXe siècle ?",recherche
+"Explique-moi ce qu'était la Guerre de Sécession",recherche
+"Quelles sont les causes de la Première Guerre mondiale ?",recherche
+"Quels pays étaient impliqués dans la guerre froide ?",recherche
+"Raconte-moi l'histoire de la prise de la Bastille",recherche
+"Explique-moi la chute de l'Empire Romain",recherche
+"Quels sont les événements clés de la Seconde Guerre mondiale ?",recherche
+"Quand a commencé la guerre d’Indépendance américaine ?",recherche
+"Quels sont les empires ayant existé en Europe ?",recherche
+"Dis-moi tout ce que tu sais sur Napoléon",recherche
+"J’aimerais apprendre plus sur l'histoire",recherche
+"Quels sont les faits historiques les plus importants ?",recherche
+"Raconte-moi une anecdote sur le Moyen Âge",recherche
+"Explique-moi une bataille célèbre",recherche
+"Peux-tu me parler d’un événement marquant ?",recherche
+"Fais-moi un exposé sur un grand personnage historique",recherche
+"Quels sont les conflits les plus meurtriers de l’Histoire ?",recherche
+"Quels sont les personnages célèbres de la Renaissance ?",recherche

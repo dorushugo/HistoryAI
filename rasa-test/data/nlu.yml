@@ -90,9 +90,30 @@ nlu:
     - am I talking to a bot?
     - am I talking to a human?
 
-- intent: demander_evenement
+- intent: question_evenement
   examples: |
-    - Peux-tu me parler de la [Révolution française](evenement) ?
-    - Quand a eu lieu [la Première Guerre mondiale](evenement) ?
-    - Que s'est-il passé en [1789](evenement) ?
-    - Quels événements historiques ont eu lieu en [1945](evenement) ?
+    - Peux-tu me parler de la Guerre de Sécession ?
+    - Quelle est la date de la bataille de Verdun ?
+    - Qui a gagné la Guerre de Cent Ans ?
+    - Quels sont les pays impliqués dans la Première Guerre mondiale ?
+    
+- intent: generation_quizz
+  examples: |
+    - Peux-tu me faire un quizz sur la Guerre froide ?
+    - J'aimerais réviser la bataille de Stalingrad, fais-moi un quizz
+    - Génère-moi un test sur la guerre d'Algérie
+    - Donne-moi 5 questions pour m'entraîner sur la Révolution française
+
+- intent: creation_fiche_revision
+  examples: |
+    - Fais-moi une fiche de révision sur la guerre de 30 ans
+    - J'aimerais une synthèse sur la guerre du Vietnam
+    - Peux-tu résumer la guerre des Gaules en une fiche ?
+    - Résume-moi la Guerre de Corée en quelques points
+
+- intent: comparaison_guerres
+  examples: |
+    - Peux-tu comparer la Première Guerre mondiale et la Seconde Guerre mondiale ?
+    - Quelles différences entre la guerre de 100 ans et la guerre de Trente Ans ?
+    - Comment la guerre du Golfe se distingue-t-elle de la guerre d'Afghanistan ?
+    - En quoi la Révolution américaine et la Révolution française sont-elles similaires ?

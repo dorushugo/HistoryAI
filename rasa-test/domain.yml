@@ -8,7 +8,10 @@ intents:
   - mood_great
   - mood_unhappy
   - bot_challenge
-  - demander_evenement
+  - question_evenement
+  - generation_quizz
+  - creation_fiche_revision
+  - comparaison_guerres
 
 responses:
   utter_greet:
@@ -37,7 +40,11 @@ responses:
     - text: "Désolé, je ne trouve pas cet événement dans ma base."
 
 actions:
-  - action_recherche_evenement
+  # - action_recherche_evenement
+  - action_recherche_evenement_deepseek
+  - action_generation_quizz_deepseek
+  - action_fiche_revision_deepseek
+  - action_comparaison_guerres_deepseek
 
 session_config:
   session_expiration_time: 60
