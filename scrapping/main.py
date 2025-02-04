@@ -11,7 +11,6 @@ import numpy as np
 
 # Supabase credentials
 SUPABASE_URL = "https://ggjjbljpisptelylnczn.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnampibGpwaXNwdGVseWxuY3puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgyMzQ2NDksImV4cCI6MjA1MzgxMDY0OX0.clHxFvCYKgudlO6J5u1df0NfN8qo5XpuRXa46XHbcQQ"
 SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnampibGpwaXNwdGVseWxuY3puIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczODIzNDY0OSwiZXhwIjoyMDUzODEwNjQ5fQ.VAKzwStH8XL1bZTOJXUKWszDjE0QpwRB0CYkQU39Xrk"
 
 OPEN_AI_SECRET_KEY="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"
@@ -105,8 +104,8 @@ def scrape_war_summary(war_url, war_id):
         content_div = soup.select_one('div#mw-content-text > div.mw-parser-output')
         full_content = content_div.get_text(" ", strip=True) if content_div else "Contenu non trouvé"
 
-        # Génération de l'embedding
-        summary_embedding = get_embedding(summary) if summary else []
+        # Génération de l'embedding sur le titre au lieu du résumé
+        title_embedding = get_embedding(war_name) if war_name else []
 
         # Construction des données
         war_data = {
@@ -115,7 +114,7 @@ def scrape_war_summary(war_url, war_id):
             "general_info": general_info_text,
             "sections": sections,
             "summary": summary,
-            "summary_embedding": summary_embedding,
+            "title_embedding": title_embedding,
             "conclusion": conclusion_text,
             "full_content": full_content,
             "url": war_url
@@ -234,8 +233,8 @@ if __name__ == "__main__":
                 print(f"Données à insérer : {json.dumps(war, indent=2, ensure_ascii=False)}")
                 
                 # Insertion
-                if 'summary_embedding' in war and war['summary_embedding']:
-                    war['summary_embedding'] = np.array(war['summary_embedding']).tolist()
+                if 'title_embedding' in war and war['title_embedding']:
+                    war['title_embedding'] = np.array(war['title_embedding']).tolist()
                 data, count = supabase.table("wars").insert(war).execute()
                 print(f"✅ Insertion réussie : {war['name']}")
 
