@@ -1,6 +1,6 @@
 import { semanticSearch } from "@/lib/ragSearch";
 import { openai } from "@ai-sdk/openai";
-import { streamText, generateObject } from "ai";
+import { streamText, generateObject, Message } from "ai";
 import { z } from "zod";
 
 export async function POST(req: Request) {
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: openai("gpt-4o"),
     system:
-      "You are a helpful assistant that can answer questions about history. Answer only about the history of wars, nothing else. Politly decline to answer questions that are not about history of wars. You can use the searchWarsInfo tool to search into the database of HistoryAI for relevant information. When you have the answer, answer in the user's language in markdown format.",
+      "You are a helpful assistant that can answer questions about history. Answer only about the history of wars, nothing else. Politly decline to answer questions that are not about history of wars. You can use the searchWarsInfo tool to search into the database of HistoryAI for relevant information. When you have the answer, answer in the user's language in markdown format. IMPORTANT: When a quiz is generated, you must ONLY respond with 'Quiz généré !' without any additional explanation or recap. When a study card is generated, you must ONLY respond with 'Fiche de révision générée !' without any additional explanation or recap - the interface will handle the display of content.",
     messages,
     maxSteps: 5,
     experimental_toolCallStreaming: true,
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     tools: {
       searchWarsInfo: {
         description:
-          "Searches similar documents in the user's documents provided into HistoryAI for relevant information. You can do multiple searches one after the other to get more results and go more in depth of a subject. The database is in french so your queries should be in french too.",
+          "Searches wars documents in the user's documents provided into HistoryAI for relevant information. You can do multiple searches one after the other to get more results and go more in depth of a subject. The database is in french so your queries should be in french too. Search by using the name of the war.",
         parameters: z.object({
           query: z.string(),
         }),
@@ -68,8 +68,12 @@ ${result.url ? `[Voir le document complet](${result.url})` : ""}`;
             .string()
             .default("fr")
             .describe("Langue de sortie pour le quiz"),
+          shouldRespondInText: z
+            .boolean()
+            .default(false)
+            .describe("Indique si une réponse textuelle est nécessaire"),
         }),
-        execute: async ({ question, lang }, { messages }) => {
+        execute: async ({ question, lang }) => {
           try {
             const { object: quizData } = await generateObject({
               model: openai("gpt-4o"),
@@ -82,6 +86,11 @@ ${result.url ? `[Voir le document complet](${result.url})` : ""}`;
                         question: z.string(),
                         options: z.array(z.string()).length(4),
                         correctAnswer: z.string(),
+                        explanation: z
+                          .string()
+                          .describe(
+                            "Explication détaillée de la réponse correcte"
+                          ),
                       })
                     )
                     .min(3)
@@ -89,10 +98,11 @@ ${result.url ? `[Voir le document complet](${result.url})` : ""}`;
                 }),
               }),
               system: `Expert en histoire militaire. Génère un quiz cohérent basé sur l'historique de conversation et les données vérifiées. 
+                      Pour chaque question, fournis une explication détaillée qui aide à comprendre pourquoi la réponse est correcte.
                       Considère le contexte suivant: ${messages
-                        .map((m) => m.content)
+                        .map((m: Message) => m.content)
                         .join("\n")}
-                      Structure les questions avec 4 options et une réponse claire.`,
+                      Structure les questions avec 4 options, une réponse claire et une explication pédagogique.`,
               messages: [
                 ...messages,
                 {
@@ -107,14 +117,76 @@ ${result.url ? `[Voir le document complet](${result.url})` : ""}`;
                 ...quizData.quiz,
                 questions: quizData.quiz.questions.map((q) => ({
                   ...q,
-                  // Mélange les options et trouve l'index correct
                   options: shuffleArray(q.options),
                   correctIndex: q.options.indexOf(q.correctAnswer),
+                  explanation: q.explanation,
                 })),
               },
+              message: "Quiz généré !",
             };
           } catch (error) {
             console.error("❌ [Tool - generateQuiz] Erreur:", error);
+            throw error;
+          }
+        },
+      },
+      generateStudyCard: {
+        description:
+          "Génère une fiche de révision structurée sur un sujet historique lié aux guerres.",
+        parameters: z.object({
+          topic: z.string().describe("Sujet de la fiche de révision"),
+          lang: z
+            .string()
+            .default("fr")
+            .describe("Langue de sortie pour la fiche"),
+        }),
+        execute: async ({ topic, lang }) => {
+          try {
+            const { object: studyCardData } = await generateObject({
+              model: openai("gpt-4o"),
+              schema: z.object({
+                studyCard: z.object({
+                  title: z.string(),
+                  introduction: z.string(),
+                  keyPoints: z.array(
+                    z.object({
+                      title: z.string(),
+                      content: z.string(),
+                    })
+                  ),
+                  dates: z.array(
+                    z.object({
+                      date: z.string(),
+                      event: z.string(),
+                    })
+                  ),
+                  keyFigures: z.array(
+                    z.object({
+                      name: z.string(),
+                      role: z.string(),
+                      description: z.string(),
+                    })
+                  ),
+                  conclusion: z.string(),
+                }),
+              }),
+              system: `Expert en histoire militaire. Génère une fiche de révision structurée et détaillée.
+                      La fiche doit inclure une introduction, des points clés, une chronologie, des personnages importants et une conclusion.
+                      Sois précis et pédagogique dans tes explications.`,
+              messages: [
+                {
+                  role: "user",
+                  content: `Crée une fiche de révision sur: ${topic} (Langue: ${lang})`,
+                },
+              ],
+            });
+
+            return {
+              studyCard: studyCardData.studyCard,
+              message: "Fiche de révision générée !",
+            };
+          } catch (error) {
+            console.error("❌ [Tool - generateStudyCard] Erreur:", error);
             throw error;
           }
         },
