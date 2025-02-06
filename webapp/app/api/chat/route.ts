@@ -6,6 +6,10 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { messageQueries } from "@/lib/db/queries";
+import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.NEXT_SERVICE_ROLE_KEY as string;
 
 export async function POST(req: Request) {
   const session = await auth.api.getSession({
@@ -14,14 +18,12 @@ export async function POST(req: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
-  console.log("session in route chat completion", session);
   const { messages, id, body } = await req.json();
-  console.log("chatId", id);
-  console.log("body", body);
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const result = streamText({
     model: openai("gpt-4o"),
     system:
-      "You are a helpful assistant that can answer questions about history. Answer only about the history of wars, nothing else. Politly decline to answer questions that are not about history of wars. You can use the searchWarsInfo tool to search into the database of HistoryAI for relevant information. When you have the answer, answer in the user's language in markdown format. IMPORTANT: When a quiz is generated, you must ONLY respond with 'Quiz généré !' without any additional explanation or recap. When a study card is generated, you must ONLY respond with 'Fiche de révision générée !' without any additional explanation or recap - the interface will handle the display of content.",
+      "You are a helpful assistant that can answer questions about history. Answer only about the history of wars, nothing else. Politly decline to answer questions that are not about history of wars. You can use the searchWarsInfo tool to search into the database of HistoryAI for relevant information. When you have the answer, answer in the user's language in markdown format. IMPORTANT: When a quiz is generated, you must ONLY respond with 'Quiz généré !' without any additional explanation or recap. When a study card is generated, you must ONLY respond with 'Fiche de révision générée !' without any additional explanation or recap - the interface will handle the display of content. You can generate audio revision of a text with the generateAudioRevision tool. When an audio is generated, you must ONLY respond with 'Audio généré !' without any additional explanation or recap.",
     messages,
     maxSteps: 5,
     experimental_toolCallStreaming: true,
@@ -34,7 +36,6 @@ export async function POST(req: Request) {
           query: z.string(),
         }),
         execute: async ({ query }) => {
-          console.log("🔍 [Tool - searchWarsInfo] Query:", query);
           try {
             const searchResults = await semanticSearch(query);
             console.log(
@@ -206,63 +207,103 @@ ${result.url ? `[Voir le document complet](${result.url})` : ""}`;
           }
         },
       },
-      /*webSearch: {
+      generateAudioRevision: {
         description:
-          "Conducts Internet research to find current and relevant information or access to a specific website. You can do multiple searches one after the other to get more results and go more in depth of a subject. You can choose the number of results you want to get depending on the complexity of your request.",
+          "Génère un audio de révision à partir d'un texte en utilisant l'API ElevenLabs Text-to-Speech et le sauvegarde dans Supabase Storage dans le bucket 'audio_files'.",
         parameters: z.object({
-          query: z.string().describe("The search query"),
-          maxResults: z
-            .number()
-            .optional()
-            .default(5)
+          text: z
+            .string()
             .describe(
-              "Maximum number of results (default: 5). You can choose the number of results you want to get depending on the complexity of your request."
+              "Texte à transformer en audio pour faciliter la révision"
             ),
         }),
-        execute: async ({ query, maxResults = 5 }) => {
+        execute: async ({ text }) => {
+          const ELEVENLABS_VOICE_ID = "gCux0vt1cPsEXPNSbchu";
+          const apiKey = process.env.ELEVENLABS_API_KEY;
+          if (!apiKey) {
+            throw new Error("Clé API ElevenLabs non configurée");
+          }
           console.log(
-            "🌐 [Tool - webSearch] Query:",
-            query,
-            "MaxResults:",
-            maxResults
+            "[Tool - generateAudioRevision] Appel de l'API ElevenLabs Text-to-Speech"
           );
-          try {
-            const webSearchUrl = new URL(
-              "/api/web-search",
-              process.env.NEXTAUTH_URL || "http://localhost:3000"
-            );
 
-            const response = await fetch(webSearchUrl.toString(), {
+          const res = await fetch(
+            `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
+            {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ query, maxResults }),
-            });
+              headers: {
+                "Content-Type": "application/json",
+                "xi-api-key": apiKey,
+              },
+              body: JSON.stringify({
+                text: text,
+                voice_settings: { stability: 0.5, similarity_boost: 0.8 },
+              }),
+            }
+          );
 
-            if (!response.ok) {
-              throw new Error("Échec de la recherche web");
+          if (!res.ok) {
+            const errorMessage = await res.text();
+            console.error(
+              "[Tool - generateAudioRevision] Erreur lors de la génération de l'audio :",
+              errorMessage
+            );
+            throw new Error(
+              `Erreur lors de la génération de l'audio: ${errorMessage}`
+            );
+          }
+
+          const audioBuffer = await res.arrayBuffer();
+          const audioBinary = Buffer.from(audioBuffer);
+          console.log(
+            "[Tool - generateAudioRevision] Audio généré, taille :",
+            audioBinary.length,
+            "octets"
+          );
+
+          // Sauvegarde dans Supabase Storage
+          try {
+            const fileName = `${session.user.id}/${id}_${Date.now()}.mp3`;
+            const { data: uploadData, error: uploadError } =
+              await supabase.storage
+                .from("audio_files")
+                .upload(fileName, audioBinary, {
+                  cacheControl: "3600",
+                  upsert: false,
+                });
+            console.log("uploadData", uploadData);
+            if (uploadError) {
+              console.error(
+                "[Tool - generateAudioRevision] Erreur lors de l'upload vers Supabase Storage :",
+                uploadError
+              );
+              throw new Error(
+                `Erreur lors de l'upload vers Supabase Storage: ${uploadError.message}`
+              );
             }
 
-            const results = await response.json();
             console.log(
-              "✅ [Tool - webSearch] Résultats trouvés:",
-              results.length
+              "[Tool - generateAudioRevision] Upload réussi :",
+              uploadData
             );
-            return {
-              results: results.map(
-                (result: { title: string; content: string; url: string }) => ({
-                  title: result.title,
-                  content: result.content,
-                  url: result.url,
-                })
-              ),
-              query,
-            };
+
+            // Construire l'URL publique à partir du chemin retourné par l'upload
+            const publicURL = `${SUPABASE_URL}/storage/v1/object/public/audio_files/${uploadData.path}`;
+
+            // Retourner l'URL avec un message
+            return JSON.stringify({
+              message: "Audio généré !",
+              url: publicURL,
+            });
           } catch (error) {
-            console.error("❌ [Tool - webSearch] Erreur:", error);
+            console.error(
+              "[Tool - generateAudioRevision] Exception lors de la sauvegarde sur Supabase Storage :",
+              error
+            );
             throw error;
           }
         },
-      },*/
+      },
     },
     onFinish: async (result) => {
       console.log("result", result);
@@ -279,7 +320,7 @@ ${result.url ? `[Voir le document complet](${result.url})` : ""}`;
         "user"
       );
 
-      // Sauvegarde tous les messages de la réponse dans l'ordre, avec un délai de 100ms entre chaque insertion
+      // Sauvegarde tous les messages de la réponse dans l'ordre, avec un délai de 50ms entre chaque insertion
       for (const msg of responseMessages) {
         const contentToSave =
           typeof msg.content === "string"
@@ -288,7 +329,6 @@ ${result.url ? `[Voir le document complet](${result.url})` : ""}`;
         // Remappage : si le rôle est "tool", on le sauvegarde comme "assistant"
         const roleToSave = msg.role === "tool" ? "assistant" : msg.role;
         await messageQueries.create(id, contentToSave, roleToSave);
-        // Petit délai de 100ms avant d'enregistrer le message suivant
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
     },
