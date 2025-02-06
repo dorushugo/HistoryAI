@@ -2,10 +2,22 @@ import { semanticSearch } from "@/lib/ragSearch";
 import { openai } from "@ai-sdk/openai";
 import { streamText, generateObject, Message } from "ai";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { NextResponse } from "next/server";
+import { messageQueries } from "@/lib/db/queries";
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
-
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  console.log("session in route chat completion", session);
+  const { messages, id, body } = await req.json();
+  console.log("chatId", id);
+  console.log("body", body);
   const result = streamText({
     model: openai("gpt-4o"),
     system:
@@ -33,16 +45,19 @@ export async function POST(req: Request) {
             // Format les résultats avec une limite de contenu
             const formattedResults = searchResults?.map((result) => {
               // Limiter le contenu à environ 1000 caractères
-              if (result.full_content) {
+              if (result.contenu_complet) {
                 const truncatedContent =
-                  result.full_content?.length > 10000
-                    ? result.full_content?.substring(0, 10000) +
+                  result.contenu_complet.length > 10000
+                    ? result.contenu_complet.substring(0, 10000) +
                       "... (contenu tronqué)"
-                    : result.full_content;
+                    : result.contenu_complet;
 
-                return `# ${result.name}
+                return `# ${result.nom}
 
-## Contenu de la page wikepédia
+## Résumé
+${result.résumé}
+
+## Contenu de la page Wikipédia
 ${truncatedContent}
 
 ${result.url ? `[Voir le document complet](${result.url})` : ""}`;
@@ -248,6 +263,34 @@ ${result.url ? `[Voir le document complet](${result.url})` : ""}`;
           }
         },
       },*/
+    },
+    onFinish: async (result) => {
+      console.log("result", result);
+      const responseMessages = result.response.messages;
+      console.log("raw response", result.response);
+
+      // Sauvegarde le message utilisateur (le dernier message dans la requête)
+      const userMessage = messages[messages.length - 1];
+      await messageQueries.create(
+        id,
+        typeof userMessage.content === "string"
+          ? userMessage.content
+          : JSON.stringify(userMessage),
+        "user"
+      );
+
+      // Sauvegarde tous les messages de la réponse dans l'ordre, avec un délai de 100ms entre chaque insertion
+      for (const msg of responseMessages) {
+        const contentToSave =
+          typeof msg.content === "string"
+            ? msg.content
+            : JSON.stringify(msg.content);
+        // Remappage : si le rôle est "tool", on le sauvegarde comme "assistant"
+        const roleToSave = msg.role === "tool" ? "assistant" : msg.role;
+        await messageQueries.create(id, contentToSave, roleToSave);
+        // Petit délai de 100ms avant d'enregistrer le message suivant
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
     },
   });
   console.log(result);

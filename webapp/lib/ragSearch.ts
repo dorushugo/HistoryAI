@@ -5,12 +5,11 @@ import { PostgrestError } from "@supabase/supabase-js";
 
 interface War {
   id: number;
-  name: string;
-  general_info: string;
-  summary: string;
+  nom: string;
+  résumé: string;
   similarity: number;
   url?: string;
-  full_content?: string;
+  contenu_complet?: string;
 }
 
 export const semanticSearch = async (query: string) => {
@@ -20,7 +19,7 @@ export const semanticSearch = async (query: string) => {
     value: query,
   });
   console.log("🎯 [Search] Embedding:", embedding.embedding[0]);
-  const { data: wars, error } = (await supabase.rpc("match_documents", {
+  const { data: wars, error } = (await supabase.rpc("match_documents_v2", {
     query_embedding: embedding.embedding,
     match_threshold: 0.78,
     match_count: 2,
@@ -36,7 +35,7 @@ export const semanticSearch = async (query: string) => {
   // Récupération des URLs des fichiers associés
   const warIds = wars.map((war) => war.id);
   const { data: fileData, error: fileError } = await supabase
-    .from("wars")
+    .from("wars_test")
     .select("id, url")
     .in("id", warIds);
 
