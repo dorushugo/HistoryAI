@@ -13,22 +13,6 @@ Application Next.js 15 avec TypeScript pour la gestion interactive de l'histoire
 - **PDF** : jsPDF pour la génération de fiches
 - **Autres** : Supabase, Zod, React Hot Toast
 
-## 📁 Structure du projet
-
-webapp/
-├── app/
-│ ├── api/
-│ │ ├── chat/ # Endpoints pour les conversations
-│ │ ├── message/ # Gestion des messages
-│ │ └── auth/ # Authentification
-│ ├── pages/ # Pages de l'app
-│ ├── components/ # Composants React
-│ └── context/ # Contextes d'application
-├── lib/
-│ ├── auth.ts # Configuration auth
-│ ├── db/ # ORM et schémas DB
-│ └── ragSearch.ts # Recherche sémantique
-
 ## ⚙️ Lancer le projet :
 
 Créer un fichier `.env` à la racine contenant vos clefs :
