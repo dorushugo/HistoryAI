@@ -7,6 +7,7 @@ import Sidebar from "./components/Sidebar";
 import { auth } from "@/lib/auth"; // path to your Better Auth server instance
 import { headers } from "next/headers";
 import SignUp from "./components/SignUp";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,27 +51,29 @@ export default async function RootLayout({
         }
       >
         <ChatProvider>
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              style: {
-                background: "#faf6f1",
-                color: "#4a3427",
-                border: "1px solid #e6d5c3",
-              },
-              success: {
-                iconTheme: {
-                  primary: "#b85c38",
-                  secondary: "#fff",
+          <TooltipProvider>
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                style: {
+                  background: "#faf6f1",
+                  color: "#4a3427",
+                  border: "1px solid #e6d5c3",
                 },
-              },
-            }}
-          />
-          <div className="flex flex-row w-full">
-            {/* Sidebar */}
-            <Sidebar className="hidden md:block border-r border-[#e6d5c3] bg-[#faf6f1] min-w-7xl" />
-            <div className="flex-1 max-w-[88vw]">{children}</div>
-          </div>
+                success: {
+                  iconTheme: {
+                    primary: "#b85c38",
+                    secondary: "#fff",
+                  },
+                },
+              }}
+            />
+            <div className="flex flex-row w-full">
+              {/* Sidebar */}
+              <Sidebar className="hidden md:block border-r border-[#e6d5c3] bg-[#faf6f1] min-w-7xl" />
+              <div className="flex-1 max-w-[88vw]">{children}</div>
+            </div>
+          </TooltipProvider>
         </ChatProvider>
       </body>
     </html>

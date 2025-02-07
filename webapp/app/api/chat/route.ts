@@ -1,5 +1,6 @@
 import { semanticSearch } from "@/lib/ragSearch";
 import { openai } from "@ai-sdk/openai";
+import { groq } from "@ai-sdk/groq";
 import { streamText, generateObject, Message } from "ai";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -18,12 +19,12 @@ export async function POST(req: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
-  const { messages, id, body } = await req.json();
+  const { messages, id } = await req.json();
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const result = streamText({
-    model: openai("gpt-4o"),
+    model: groq("deepseek-r1-distill-llama-70b-specdec"),
     system:
-      "You are a helpful assistant that can answer questions about history. Answer only about the history of wars, nothing else. Politly decline to answer questions that are not about history of wars. You can use the searchWarsInfo tool to search into the database of HistoryAI for relevant information. When you have the answer, answer in the user's language in markdown format. IMPORTANT: When a quiz is generated, you must ONLY respond with 'Quiz généré !' without any additional explanation or recap. When a study card is generated, you must ONLY respond with 'Fiche de révision générée !' without any additional explanation or recap - the interface will handle the display of content. You can generate audio revision of a text with the generateAudioRevision tool. When an audio is generated, you must ONLY respond with 'Audio généré !' without any additional explanation or recap. If you think something is about war but the user didn't specify the name of the war, try to find the most relevant war and answer about it.",
+      "You are a helpful assistant that can answer questions about history. Answer only about the history of wars, nothing else. Politly decline to answer questions that are not about history of wars. You can use the searchWarsInfo tool to search into the database of HistoryAI for relevant information, to correctly use the searchWarsInfo tool, you must search by using the name of the war relevant to the question. When you have the answer, answer in the user's language in markdown format. IMPORTANT: When a quiz is generated, you must ONLY respond with 'Quiz généré !' without any additional explanation or recap. When a study card is generated, you must ONLY respond with 'Fiche de révision générée !' without any additional explanation or recap - the interface will handle the display of content. You can generate audio revision of a text with the generateAudioRevision tool. When an audio is generated, you must ONLY respond with 'Audio généré !' without any additional explanation or recap. If you think something is about war but the user didn't specify the name of the war, try to find the most relevant war and answer about it.",
     messages,
     maxSteps: 5,
     experimental_toolCallStreaming: true,
