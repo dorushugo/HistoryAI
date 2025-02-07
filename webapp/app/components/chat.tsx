@@ -596,12 +596,10 @@ interface ChatProps {
   isMessagesLoading?: boolean;
 }
 
-// Nouveau composant AudioPlayer (version améliorée)
-type AudioPlayerProps = {
-  src: string;
-};
-
-const AudioPlayer = ({ src }: AudioPlayerProps) => {
+// -------------------------------------------------
+// Nouveau composant AudioPlayer
+// -------------------------------------------------
+const AudioPlayer = ({ src }: { src: string }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -612,27 +610,26 @@ const AudioPlayer = ({ src }: AudioPlayerProps) => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-    };
-
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
     };
 
-    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+    };
+
     audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
 
     return () => {
-      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
     };
   }, []);
 
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
-
     if (isPlaying) {
       audio.pause();
     } else {
@@ -641,18 +638,27 @@ const AudioPlayer = ({ src }: AudioPlayerProps) => {
     setIsPlaying(!isPlaying);
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = parseFloat(e.target.value);
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-    }
+  const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const newTime = Number(e.target.value);
+    audio.currentTime = newTime;
     setCurrentTime(newTime);
   };
 
-  const updatePlaybackRate = (rate: number) => {
-    setPlaybackRate(rate);
+  const decreaseSpeed = () => {
+    const newRate = Math.max(0.5, playbackRate - 0.25);
+    setPlaybackRate(newRate);
     if (audioRef.current) {
-      audioRef.current.playbackRate = rate;
+      audioRef.current.playbackRate = newRate;
+    }
+  };
+
+  const increaseSpeed = () => {
+    const newRate = Math.min(2, playbackRate + 0.25);
+    setPlaybackRate(newRate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = newRate;
     }
   };
 
@@ -663,57 +669,51 @@ const AudioPlayer = ({ src }: AudioPlayerProps) => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto mt-4 p-4 bg-[#faf6f1] rounded-lg rounded-bl-none shadow-lg border border-[#e6d5c3]">
+    <div className="flex flex-col gap-2 mt-2">
+      {/* L'élément audio est géré en interne */}
       <audio ref={audioRef} src={src} preload="metadata" />
-
-      {/* Bouton Play / Pause */}
-      <div className="flex justify-center mt-2 mb-4">
+      <div className="flex items-center gap-4">
         <button
           onClick={togglePlay}
-          className="flex items-center justify-center w-12 h-12 bg-[#b85c38] text-white rounded-full hover:bg-[#a34e2e] transition-colors"
+          className="flex items-center justify-center p-2 bg-[#b85c38] text-white rounded-full hover:bg-[#a34e2e] transition-colors"
         >
           {isPlaying ? (
-            <Pause className="w-6 h-6" />
+            <Pause className="w-5 h-5" />
           ) : (
-            <Play className="w-6 h-6" />
+            <Play className="w-5 h-5" />
           )}
         </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={decreaseSpeed}
+            className="flex items-center justify-center p-1 bg-[#faf6f1] border border-[#e6d5c3] rounded hover:bg-[#f0e6d9] transition-colors"
+          >
+            <Minus className="w-4 h-4 text-[#4a3427]" />
+          </button>
+          <span className="font-medium text-[#4a3427]">
+            {playbackRate.toFixed(2)}x
+          </span>
+          <button
+            onClick={increaseSpeed}
+            className="flex items-center justify-center p-1 bg-[#faf6f1] border border-[#e6d5c3] rounded hover:bg-[#f0e6d9] transition-colors"
+          >
+            <Plus className="w-4 h-4 text-[#4a3427]" />
+          </button>
+        </div>
       </div>
-
-      {/* Barre de progression */}
-      <div className="flex items-center space-x-2">
-        <span className="text-sm text-[#4a3427]">
-          {formatTime(currentTime)}
-        </span>
+      <div className="flex items-center gap-2">
         <input
           type="range"
           min="0"
           max={duration}
           step="0.1"
           value={currentTime}
-          onChange={handleSeek}
-          className="flex-1 h-2 rounded-lg appearance-none bg-[#e6d5c3] accent-[#b85c38]"
+          onChange={handleProgressChange}
+          className="w-full"
         />
-        <span className="text-sm text-[#4a3427]">{formatTime(duration)}</span>
-      </div>
-
-      {/* Contrôle de la vitesse */}
-      <div className="flex items-center justify-center mt-4 gap-4">
-        <button
-          onClick={() => updatePlaybackRate(Math.max(0.5, playbackRate - 0.25))}
-          className="p-2 bg-[#faf6f1] border border-[#e6d5c3] rounded hover:bg-[#f0e6d9] transition-colors"
-        >
-          <Minus className="w-4 h-4 text-[#4a3427]" />
-        </button>
-        <span className="text-base font-medium text-[#4a3427]">
-          {playbackRate.toFixed(2)}x
+        <span className="text-sm text-[#665147]">
+          {formatTime(currentTime)} / {formatTime(duration)}
         </span>
-        <button
-          onClick={() => updatePlaybackRate(Math.min(2, playbackRate + 0.25))}
-          className="p-2 bg-[#faf6f1] border border-[#e6d5c3] rounded hover:bg-[#f0e6d9] transition-colors"
-        >
-          <Plus className="w-4 h-4 text-[#4a3427]" />
-        </button>
       </div>
     </div>
   );
@@ -738,7 +738,7 @@ export default function Home({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
   useEffect(() => {
     if (messages.length > 0) {
       console.log("Liste des messsages", messages);
@@ -866,8 +866,9 @@ export default function Home({
               key={toolCallId}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className=""
+              className="flex flex-col gap-2 p-3 bg-[#faf6f1] rounded-lg border border-[#e6d5c3]"
             >
+              <span>{audioResult.message}</span>
               {audioResult.url && <AudioPlayer src={audioResult.url} />}
             </motion.div>
           );
@@ -945,7 +946,6 @@ export default function Home({
         (data.type === "tool-result" && data.toolName && data.result)
       );
     } catch (e) {
-      console.error("Erreur lors du parsing du contenu du message :", e);
       return false;
     }
   };
@@ -1013,11 +1013,6 @@ export default function Home({
             // Ne pas afficher les tool-calls qui attendent une saisie si besoin
             if (toolInvocation?.state === "awaiting_input") return null;
 
-            // Détermine si le message est un message tool (via toolInvocations ou un JSON tool)
-            const isToolMessage =
-              (message.toolInvocations && message.toolInvocations.length > 0) ||
-              isToolInvocationJson(message.content);
-
             return (
               <motion.div
                 key={message.id}
@@ -1033,30 +1028,28 @@ export default function Home({
                   message.role === "user" ? "justify-end" : "justify-start"
                 )}
               >
-                {isToolMessage ? (
-                  <>
-                    {message.toolInvocations?.map(renderToolInvocation)}
-                    {toolInvocation &&
-                      renderToolInvocation(toolInvocation as ToolInvocation)}
-                  </>
-                ) : (
-                  <div
-                    className={cx(
-                      "max-w-[80%] rounded-lg p-4 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow duration-300",
-                      message.role === "user"
-                        ? "bg-gradient-to-br from-[#b85c38] to-[#a34e2e] text-white rounded-br-none"
-                        : "bg-[#faf6f1] text-[#4a3427] rounded-bl-none border border-[#e6d5c3]"
-                    )}
-                  >
-                    {message.content && (
+                <div
+                  className={cx(
+                    "max-w-[80%] rounded-lg p-4 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow duration-300",
+                    message.role === "user"
+                      ? "bg-gradient-to-br from-[#b85c38] to-[#a34e2e] text-white rounded-br-none"
+                      : "bg-[#faf6f1] text-[#4a3427] rounded-bl-none border border-[#e6d5c3]"
+                  )}
+                >
+                  {message.toolInvocations?.map(renderToolInvocation)}
+
+                  {toolInvocation &&
+                    renderToolInvocation(toolInvocation as ToolInvocation)}
+
+                  {message.content &&
+                    !isToolInvocationJson(message.content) && (
                       <div className="prose prose-sm max-w-none">
                         <Markdown>
                           {getPlainTextFromContent(message.content)}
                         </Markdown>
                       </div>
                     )}
-                  </div>
-                )}
+                </div>
               </motion.div>
             );
           })}
